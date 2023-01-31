@@ -40,6 +40,7 @@
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
 #include <X11/Xft/Xft.h>
+#include <time.h>
 
 #include "drw.h"
 #include "util.h"
@@ -222,7 +223,7 @@ static void updateclientlist(void);
 static int updategeom(void);
 static void updatenumlockmask(void);
 static void updatesizehints(Client *c);
-static void updatestatus(void);
+static void updatestatus(char *text);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
@@ -233,6 +234,7 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+static void updatestatuseverymin();
 
 /* variables */
 static const char broken[] = "broken";
@@ -1226,7 +1228,8 @@ propertynotify(XEvent *e)
 	XPropertyEvent *ev = &e->xproperty;
 
 	if ((ev->window == root) && (ev->atom == XA_WM_NAME))
-		updatestatus();
+		{}
+		// updatestatus("Test 󰻠    󱛇  ");
 	else if (ev->state == PropertyDelete)
 		return; /* ignore */
 	else if ((c = wintoclient(ev->window))) {
@@ -1385,9 +1388,11 @@ run(void)
 	XEvent ev;
 	/* main event loop */
 	XSync(dpy, False);
-	while (running && !XNextEvent(dpy, &ev))
+	while (running && !XNextEvent(dpy, &ev)){
+		updatestatuseverymin();
 		if (handler[ev.type])
 			handler[ev.type](&ev); /* call handler */
+	}
 }
 
 void
@@ -1589,7 +1594,7 @@ setup(void)
 		scheme[i] = drw_scm_create(drw, colors[i], 3);
 	/* init bars */
 	updatebars();
-	updatestatus();
+	// updatestatus("Test 󰻠    󱛇  ");
 	/* supporting window for NetWMCheck */
 	wmcheckwin = XCreateSimpleWindow(dpy, root, 0, 0, 1, 1, 0, 0, 0);
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,
@@ -1995,10 +2000,10 @@ updatesizehints(Client *c)
 }
 
 void
-updatestatus(void)
+updatestatus(char *text)
 {
-	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "dwm-"VERSION);
+	// if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
+	strcpy(stext, text);
 	drawbar(selmon);
 }
 
@@ -2130,6 +2135,22 @@ zoom(const Arg *arg)
 	if (c == nexttiled(selmon->clients) && !(c = nexttiled(c->next)))
 		return;
 	pop(c);
+}
+
+void updatestatuseverymin(){
+	static time_t last_call_time = 0;
+	time_t current_time = time(NULL);
+
+	static int counter = 0;
+
+	if(current_time - last_call_time >= 1){
+		char text[255];
+		sprintf(text, "%d", counter);
+		updatestatus(text);
+		counter++;
+		last_call_time = current_time;
+	}
+
 }
 
 int
